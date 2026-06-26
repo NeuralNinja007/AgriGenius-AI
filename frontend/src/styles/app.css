@@ -2,7 +2,8 @@
   display: grid;
   grid-template-columns: 304px minmax(0, 1fr);
   height: 100dvh;
-  min-height: 100vh;
+  min-height: 0;
+  width: 100%;
   overflow: hidden;
 }
 
@@ -513,7 +514,9 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   height: 100dvh;
+  overflow: hidden;
   background:
     radial-gradient(ellipse at 18% 8%, rgba(111, 141, 106, 0.055), transparent 34%),
     radial-gradient(ellipse at 88% 18%, rgba(181, 138, 67, 0.035), transparent 32%),
@@ -522,6 +525,7 @@
 }
 
 .chat-header {
+  flex-shrink: 0;
   min-height: 72px;
   padding: 12px 28px;
   border-bottom: 1px solid var(--border-soft);
@@ -595,7 +599,9 @@
 
 .messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 32px 36px;
   display: flex;
   flex-direction: column;
@@ -609,6 +615,7 @@
   width: 100%;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
   animation: welcomeFadeOut 0.22s ease both;
 }
 
@@ -985,6 +992,7 @@
   position: sticky;
   bottom: 0;
   z-index: 8;
+  flex-shrink: 0;
   padding: 14px 36px 20px;
   border-top: 1px solid var(--border-soft);
   background: rgba(246, 239, 223, 0.9);
@@ -1667,6 +1675,7 @@
 
 .weather-widget {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px 14px;

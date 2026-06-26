@@ -83,7 +83,10 @@ Backend variables:
 
 Frontend variables:
 
-- `VITE_API_BASE_URL`: optional API base URL. Defaults to `/api`.
+- `VITE_API_BASE_URL`: API base URL. Local Vite development can use `/api`
+  because Vite proxies requests to FastAPI. Static/deployed frontends must set
+  this to the deployed HTTPS backend API URL, for example
+  `https://your-api-host.example.com/api`.
 
 Never commit real `.env` files, API keys, tokens, or platform secrets.
 
@@ -112,6 +115,19 @@ npm run dev
 
 The frontend runs at `http://localhost:5173`. During local development, Vite
 proxies `/api/*` requests to the backend on port 8000.
+
+## Deployment Notes
+
+For geolocation-backed weather to work after deployment:
+
+- Serve the frontend over HTTPS.
+- Deploy the FastAPI backend separately if your frontend host is static.
+- Set frontend `VITE_API_BASE_URL` to the deployed backend `/api` URL.
+- Set backend `ALLOWED_ORIGINS` to include the deployed frontend origin.
+
+Without those production variables, the deployed frontend will call its own
+`/api` path instead of FastAPI, or the backend may reject the browser request
+with CORS.
 
 ## Production Build
 

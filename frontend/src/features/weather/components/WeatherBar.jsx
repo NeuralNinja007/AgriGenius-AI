@@ -67,7 +67,7 @@ async function fetchLocalWeather(language, options = {}) {
       const region = location?.countryName || location?.principalSubdivision
       const locationLabel = [city, region].filter(Boolean).join(', ') || null
 
-      if (weatherResult.status !== 'fulfilled') throw new Error('Weather fetch failed')
+      if (weatherResult.status !== 'fulfilled') throw new Error('weather-unavailable')
 
       return {
         weather: weatherResult.value,
@@ -78,7 +78,10 @@ async function fetchLocalWeather(language, options = {}) {
       return {
         weather: null,
         locationLabel: null,
-        errorCode: error?.message === 'geolocation-unavailable' ? 'unavailable' : 'denied',
+        errorCode:
+          error?.message === 'geolocation-unavailable' || error?.message === 'weather-unavailable'
+            ? 'unavailable'
+            : 'denied',
       }
     }
   })()
@@ -112,9 +115,12 @@ export default function WeatherBar({ strings, onFarmingAdvice }) {
       initialFetchStartedRef.current = true
       setLoading(true)
 
-      const result = await fetchLocalWeather(requestLanguageRef.current, { forceRefresh })
-      applyWeatherResult(result)
-      setLoading(false)
+      try {
+        const result = await fetchLocalWeather(requestLanguageRef.current, { forceRefresh })
+        applyWeatherResult(result)
+      } finally {
+        setLoading(false)
+      }
     },
     [applyWeatherResult]
   )
