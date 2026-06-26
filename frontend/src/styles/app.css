@@ -1166,6 +1166,31 @@
   .mobile-close-btn {
     display: flex;
   }
+  .intro-top-row {
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .intro-top-row .brand {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .intro-top-row .brand-mark-shell {
+    width: 68px;
+    height: 68px;
+    padding: 5px;
+  }
+  .intro-top-row .brand-name {
+    font-size: 22px;
+    overflow-wrap: anywhere;
+  }
+  .intro-top-row .brand-subtitle {
+    font-size: 12px;
+  }
+  .mobile-close-btn {
+    margin-inline-start: auto;
+    position: relative;
+    z-index: 2;
+  }
   .messages {
     padding: 18px 14px;
     gap: 16px;
@@ -1207,7 +1232,7 @@
   }
   .chat-header {
     padding: 10px 12px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 10px;
   }
   .chat-header-left,
@@ -1215,11 +1240,12 @@
     min-width: 0;
   }
   .chat-header-left {
-    flex: 1 1 100%;
+    flex: 1 1 auto;
   }
   .chat-header-right {
-    flex: 1 1 100%;
-    justify-content: space-between;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    gap: 8px;
   }
   .control-label {
     display: none;
@@ -1659,6 +1685,18 @@
   font-weight: 650;
 }
 
+.weather-refresh-btn {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.weather-refresh-btn:hover {
+  color: var(--soil);
+}
+
 .weather-location svg {
   width: 16px;
   height: 16px;
@@ -1977,13 +2015,24 @@
 }
 
 @media (max-width: 360px) {
+  .chat-header {
+    gap: 8px;
+  }
+
+  .chat-header-sub {
+    display: none;
+  }
+
   .chat-header-right {
-    align-items: flex-start;
     gap: 8px;
   }
 
   .status-dot {
-    padding-inline: 10px;
+    width: 44px;
+    min-width: 44px;
+    padding: 0;
+    justify-content: center;
+    font-size: 0;
   }
 
   .quick-action-btn {
