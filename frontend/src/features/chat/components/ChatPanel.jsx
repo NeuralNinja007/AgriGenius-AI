@@ -13,6 +13,10 @@ export default function ChatPanel({
   error,
   onSend,
   onWeatherAdvice,
+  location,
+  locationStatus,
+  locationErrorCode,
+  onRefreshLocation,
   onOpenMobileIntro,
   onToggleLargeText,
   onToggleHighContrast,
@@ -67,7 +71,14 @@ export default function ChatPanel({
         onToggleHighContrast={onToggleHighContrast}
       />
 
-      <WeatherBar strings={strings} onFarmingAdvice={onWeatherAdvice} />
+      <WeatherBar
+        strings={strings}
+        location={location}
+        locationStatus={locationStatus}
+        locationErrorCode={locationErrorCode}
+        onRefreshLocation={onRefreshLocation}
+        onFarmingAdvice={onWeatherAdvice}
+      />
 
       {displayWelcomeScreen ? (
         <WelcomeScreen

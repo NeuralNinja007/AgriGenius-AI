@@ -1,8 +1,43 @@
 import httpx
 
-from app.prompts.system_prompts import DISEASE_ONLY_PROMPT_EN, PROMPTS, SYSTEM_PROMPT_EN
+from app.prompts.system_prompts import DISEASE_ONLY_PROMPTS, PROMPTS, SYSTEM_PROMPT_EN
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+
+def _location_context(location: dict | None) -> str:
+    if not location:
+        return (
+            "Detected user location: unavailable.\n"
+            "Default agricultural context: Saudi Arabia, GCC.\n"
+            "Default currency: SAR.\n"
+            "If the user explicitly mentions another location, use that location instead."
+        )
+
+    city = location.get("city") or ""
+    state = location.get("stateProvince") or ""
+    country = location.get("country") or ""
+    country_code = location.get("countryCode") or ""
+    currency = location.get("currency") or ""
+    latitude = location.get("latitude")
+    longitude = location.get("longitude")
+    label = location.get("label") or ", ".join(part for part in [city, state, country] if part)
+
+    lines = [
+        "Detected user location context:",
+        f"Location label: {label or 'Unavailable'}",
+        f"Latitude: {latitude}" if latitude is not None else "Latitude: unavailable",
+        f"Longitude: {longitude}" if longitude is not None else "Longitude: unavailable",
+        f"City: {city or 'unavailable'}",
+        f"State / Province: {state or 'unavailable'}",
+        f"Country: {country or 'unavailable'}",
+        f"Country code: {country_code or 'unavailable'}",
+        f"Local currency: {currency or 'SAR'}",
+        "Use this detected location as the default for crop, irrigation, fertilizer, pesticide, market, supplier, seasonal, pest, and soil advice.",
+        "If the user explicitly mentions another country, city, or region, that explicit user location overrides this detected location for the current conversation.",
+        "Do not invent live local prices, supplier names, regulations, pest alerts, or official data. If reliable exact local information is unavailable, say so and give the closest practical regional recommendation.",
+    ]
+    return "\n".join(lines)
 
 
 class AIClient:
@@ -17,6 +52,7 @@ class AIClient:
         language: str = "en",
         image_data_url: str | None = None,
         intent: str = "general",
+        location: dict | None = None,
     ) -> str:
         """
         Sends the user's message, prior turns, and optional photo to OpenRouter.
@@ -28,9 +64,13 @@ class AIClient:
         """
         system_prompt = PROMPTS.get(language, SYSTEM_PROMPT_EN)
         if intent == "disease" and image_data_url:
-            system_prompt = PROMPTS.get(language, SYSTEM_PROMPT_EN) + "\n" + DISEASE_ONLY_PROMPT_EN
+            system_prompt = (
+                PROMPTS.get(language, SYSTEM_PROMPT_EN)
+                + "\n"
+                + DISEASE_ONLY_PROMPTS.get(language, DISEASE_ONLY_PROMPTS["en"])
+            )
 
-        messages = [{"role": "system", "content": system_prompt}]
+        messages = [{"role": "system", "content": system_prompt + "\n\n" + _location_context(location)}]
 
         for turn in history:
             text = turn.get("content") or ""

@@ -149,8 +149,8 @@ export const QUICK_ACTION_PROMPTS = {
     fertilizer: 'What fertilizer schedule do you recommend for my crop? Please ask which crop if needed.',
     pest: 'How can I control pests on my crop without harming the environment?',
     weather: 'Based on typical farming needs, what field work should I plan today given current weather conditions?',
-    schemes: 'What government agriculture schemes and subsidies are available for small farmers in India?',
-    market: 'What are the current indicative mandi/market prices for common crops? Please note prices vary by location.',
+    schemes: 'What government agriculture support or subsidy options are available for small farmers in the GCC?',
+    market: 'What are the current indicative local market prices for common Gulf crops? Please note prices vary by country, date, and quality.',
     expert: 'How can I contact a local agriculture expert or extension officer for help?',
   },
   ar: {

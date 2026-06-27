@@ -11,7 +11,7 @@ import {
 } from '../../../services/storage/conversationStorage.js'
 import { cleanAssistantReply } from '../../../utils/cleanAssistantReply.js'
 
-export function useChatWorkspace({ activeLanguage, languageMode, setActiveLanguage, strings }) {
+export function useChatWorkspace({ activeLanguage, languageMode, location, setActiveLanguage, strings }) {
   const [conversations, setConversations] = useState(() => {
     const stored = loadConversations()
     return stored.length ? stored : [createConversation(STRINGS.en.welcomeMessage)]
@@ -151,6 +151,7 @@ export function useChatWorkspace({ activeLanguage, languageMode, setActiveLangua
           image: imageDataUrl,
           language: detected,
           intent,
+          location,
           history: messages.map((message) => ({ role: message.role, content: message.content || '' })),
         })
 
@@ -179,6 +180,7 @@ export function useChatWorkspace({ activeLanguage, languageMode, setActiveLangua
       activeLanguage,
       isLoading,
       languageMode,
+      location,
       messages,
       persistConversations,
       setActiveLanguage,

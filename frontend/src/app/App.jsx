@@ -3,6 +3,7 @@ import LanguageToggle from '../components/ui/LanguageToggle.jsx'
 import { STRINGS } from '../config/i18n.js'
 import ChatPanel from '../features/chat/components/ChatPanel.jsx'
 import { useChatWorkspace } from '../features/chat/hooks/useChatWorkspace.js'
+import { useDetectedLocation } from '../features/location/useDetectedLocation.js'
 import Sidebar from '../features/sidebar/components/Sidebar.jsx'
 import { useDocumentPreferences } from './useDocumentPreferences.js'
 import '../styles/app.css'
@@ -16,6 +17,7 @@ export default function App() {
   const cameraTriggerRef = useRef(null)
 
   const strings = STRINGS[activeLanguage] || STRINGS.en
+  const detectedLocation = useDetectedLocation(strings.dir === 'rtl' ? 'ar' : 'en')
   useDocumentPreferences({
     dir: strings.dir,
     language: activeLanguage,
@@ -37,6 +39,7 @@ export default function App() {
   } = useChatWorkspace({
     activeLanguage,
     languageMode,
+    location: detectedLocation.location,
     setActiveLanguage,
     strings,
   })
@@ -129,6 +132,10 @@ export default function App() {
         error={error}
         onSend={sendMessage}
         onWeatherAdvice={handleWeatherAdvice}
+        location={detectedLocation.location}
+        locationStatus={detectedLocation.status}
+        locationErrorCode={detectedLocation.errorCode}
+        onRefreshLocation={detectedLocation.refreshLocation}
         onOpenMobileIntro={() => setShowMobileIntro(true)}
         largeText={largeText}
         highContrast={highContrast}

@@ -1,171 +1,133 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { MapPinIcon } from '../../../components/common/Icons.jsx'
-import { getWeather, reverseGeocode } from '../../../services/api/weatherApi.js'
+import { getWeather } from '../../../services/api/weatherApi.js'
 
-const weatherRequestCache = {
-  promise: null,
-  result: null,
+const WEATHER_CACHE_TTL_MS = 10 * 60 * 1000
+const weatherCache = new Map()
+const weatherRequests = new Map()
+
+function weatherCacheKey(location) {
+  return `${location.latitude.toFixed(2)},${location.longitude.toFixed(2)}`
 }
 
-function getGeolocation(options = {}) {
-  return new Promise((resolve, reject) => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      reject(new Error('geolocation-unavailable'))
-      return
-    }
+function readCachedWeather(key) {
+  const cached = weatherCache.get(key)
+  if (!cached) return null
+  if (Date.now() - cached.cachedAt > WEATHER_CACHE_TTL_MS) {
+    weatherCache.delete(key)
+    return null
+  }
+  return cached.weather
+}
 
-    let settled = false
-    const timeoutMs = options.timeout || 10000
-    const timeoutId = window.setTimeout(() => {
-      if (settled) return
-      settled = true
-      reject(new Error('geolocation-timeout'))
-    }, timeoutMs + 1000)
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        if (settled) return
-        settled = true
-        window.clearTimeout(timeoutId)
-        resolve(position)
-      },
-      (error) => {
-        if (settled) return
-        settled = true
-        window.clearTimeout(timeoutId)
-        reject(error)
-      },
-      options
-    )
+function writeCachedWeather(key, weather) {
+  weatherCache.set(key, {
+    weather,
+    cachedAt: Date.now(),
   })
 }
 
-async function fetchLocalWeather(language, options = {}) {
-  if (!options.forceRefresh) {
-    if (weatherRequestCache.result) return weatherRequestCache.result
-    if (weatherRequestCache.promise) return weatherRequestCache.promise
+async function fetchWeatherForLocation(location, { forceRefresh = false } = {}) {
+  const key = weatherCacheKey(location)
+  if (!forceRefresh) {
+    const cached = readCachedWeather(key)
+    if (cached) return cached
+    const pending = weatherRequests.get(key)
+    if (pending) return pending
   }
 
-  const requestPromise = (async () => {
-    try {
-      const pos = await getGeolocation({
-        timeout: 10000,
-        maximumAge: options.forceRefresh ? 0 : 600000,
-        enableHighAccuracy: false,
-      })
-      const { latitude, longitude } = pos.coords
-      const [weatherResult, locationResult] = await Promise.allSettled([
-        getWeather({ latitude, longitude }),
-        reverseGeocode({ latitude, longitude, language }),
-      ])
-
-      const location =
-        locationResult.status === 'fulfilled'
-          ? locationResult.value
-          : null
-      const city = location?.city || location?.locality || location?.principalSubdivision
-      const region = location?.countryName || location?.principalSubdivision
-      const locationLabel = [city, region].filter(Boolean).join(', ') || null
-
-      if (weatherResult.status !== 'fulfilled') throw new Error('weather-unavailable')
-
-      return {
-        weather: weatherResult.value,
-        locationLabel,
-        errorCode: null,
+  const request = getWeather({
+    latitude: location.latitude,
+    longitude: location.longitude,
+  })
+    .then((weather) => {
+      writeCachedWeather(key, weather)
+      return weather
+    })
+    .finally(() => {
+      if (weatherRequests.get(key) === request) {
+        weatherRequests.delete(key)
       }
-    } catch (error) {
-      return {
-        weather: null,
-        locationLabel: null,
-        errorCode:
-          error?.message === 'geolocation-unavailable' || error?.message === 'weather-unavailable'
-            ? 'unavailable'
-            : 'denied',
-      }
-    }
-  })()
-  weatherRequestCache.promise = requestPromise
+    })
 
-  const result = await requestPromise
-  if (weatherRequestCache.promise === requestPromise) {
-    if (result.weather) weatherRequestCache.result = result
-    weatherRequestCache.promise = null
-  }
-  return result
+  weatherRequests.set(key, request)
+  return request
 }
 
-export default function WeatherBar({ strings, onFarmingAdvice }) {
+export default function WeatherBar({
+  strings,
+  location,
+  locationStatus,
+  locationErrorCode,
+  onRefreshLocation,
+  onFarmingAdvice,
+}) {
   const [weather, setWeather] = useState(null)
-  const [locationLabel, setLocationLabel] = useState(null)
   const [loading, setLoading] = useState(false)
   const [errorCode, setErrorCode] = useState(null)
-  const initialFetchStartedRef = useRef(false)
-  const requestLanguageRef = useRef(strings.dir === 'rtl' ? 'ar' : 'en')
-
-  const applyWeatherResult = useCallback((result) => {
-    setWeather(result.weather)
-    setLocationLabel(result.locationLabel)
-    setErrorCode(result.errorCode)
-  }, [])
+  const requestIdRef = useRef(0)
 
   const loadWeather = useCallback(
     async ({ forceRefresh = false } = {}) => {
-      if (!forceRefresh && initialFetchStartedRef.current) return
-      initialFetchStartedRef.current = true
+      if (!location) return
+      const requestId = requestIdRef.current + 1
+      requestIdRef.current = requestId
       setLoading(true)
+      setErrorCode(null)
 
       try {
-        const result = await fetchLocalWeather(requestLanguageRef.current, { forceRefresh })
-        applyWeatherResult(result)
+        const nextWeather = await fetchWeatherForLocation(location, { forceRefresh })
+        if (requestIdRef.current !== requestId) return
+        setWeather(nextWeather)
+      } catch {
+        if (requestIdRef.current !== requestId) return
+        setErrorCode('weather-unavailable')
       } finally {
-        setLoading(false)
+        if (requestIdRef.current === requestId) setLoading(false)
       }
     },
-    [applyWeatherResult]
+    [location]
   )
 
   useEffect(() => {
-    let isMounted = true
-
-    async function loadInitialWeather() {
-      if (!weatherRequestCache.result && !weatherRequestCache.promise) setLoading(true)
-      const result = await fetchLocalWeather(requestLanguageRef.current)
-      if (!isMounted) return
-      initialFetchStartedRef.current = true
-      applyWeatherResult(result)
-      setLoading(false)
+    if (location) {
+      loadWeather()
     }
+  }, [location, loadWeather])
 
-    if (!initialFetchStartedRef.current) {
-      initialFetchStartedRef.current = true
-      loadInitialWeather()
+  const handleRefresh = useCallback(async () => {
+    const refreshedLocation = await onRefreshLocation?.({ forceRefresh: true })
+    if (!refreshedLocation && location) {
+      loadWeather({ forceRefresh: true })
     }
+  }, [loadWeather, location, onRefreshLocation])
 
-    return () => {
-      isMounted = false
-    }
-  }, [applyWeatherResult])
+  const isLocationLoading = !location && (locationStatus === 'idle' || locationStatus === 'loading')
+  const isWeatherLoading = (loading || (location && !weather && !errorCode)) && !weather
+  const locationUnavailable = !location && locationStatus === 'error'
+  const weatherUnavailable = Boolean(errorCode)
+  const error =
+    locationUnavailable && locationErrorCode === 'geolocation-denied'
+      ? strings.weatherDenied
+      : strings.weatherUnavailable
 
-  const error = errorCode === 'denied' ? strings.weatherDenied : strings.weatherUnavailable
-
-  if (loading) {
+  if (isLocationLoading || isWeatherLoading) {
     return <div className="weather-widget weather-loading">{strings.weatherLoading}</div>
   }
 
-  if (error || !weather) {
+  if (locationUnavailable || weatherUnavailable) {
     return (
-      <button
-        type="button"
-        className="weather-widget weather-error"
-        onClick={() => loadWeather({ forceRefresh: true })}
-      >
+      <button type="button" className="weather-widget weather-error" onClick={handleRefresh}>
         <span className="weather-location">
-          <MapPinIcon /> {locationLabel || strings.locationUnavailable}
+          <MapPinIcon /> {location?.label || strings.locationUnavailable}
         </span>
-        <span>{error || strings.weatherUnavailable}</span>
+        <span>{error}</span>
       </button>
     )
+  }
+
+  if (!location || !weather) {
+    return <div className="weather-widget weather-loading">{strings.weatherLoading}</div>
   }
 
   return (
@@ -173,11 +135,11 @@ export default function WeatherBar({ strings, onFarmingAdvice }) {
       <button
         type="button"
         className="weather-location weather-refresh-btn"
-        onClick={() => loadWeather({ forceRefresh: true })}
+        onClick={handleRefresh}
         aria-label="Refresh location"
         title="Refresh location"
       >
-        <MapPinIcon /> {locationLabel || strings.locationUnavailable}
+        <MapPinIcon /> {location.label || strings.locationUnavailable}
       </button>
       <div className="weather-line">
         <span className="weather-icon" aria-hidden="true">
