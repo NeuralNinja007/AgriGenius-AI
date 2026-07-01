@@ -19,7 +19,7 @@ This repository is prepared as the v1.0 release candidate.
 - FastAPI backend with OpenRouter integration
 - Responsive React/Vite frontend designed for mobile, tablet, and desktop
 
-## Repository Structure
+## Repository Structure.
 
 ```text
 agrigenius-project/
